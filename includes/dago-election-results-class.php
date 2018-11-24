@@ -1,19 +1,48 @@
 <?php
 
+defined ( 'ABSPATH' ) or die();  //Makes sure that the plugin is inizialized by WP.
+
 /**
- * Adds DA Election Results widget.
- */
-class DA_Election_Results_Widget extends WP_Widget {
+ * Adds DAGO Election Results widget.
+ */	
+class DAGO_Election_Results_Widget extends WP_Widget {
 
 	/**
 	 * Register widget with WordPress.
 	 */
 	function __construct() {
 		parent::__construct(
-			'da_election_results_widget', // Base ID
-			esc_html__( 'Widget DA Election Results', 'da_election_results_domain' ), // Name
-			array( 'description' => esc_html__( 'Displays Election Results', 'da_election_results_domain' ), ) // Args
+			'DAGO_election_results_widget', // Base ID
+			esc_html__( 'DAGO Election Results Widget', 'dago_election_results_domain' ), // Name
+			array( 'description' => esc_html__( 'Displays Election Results', 'dago_election_results_domain' ), ) // Args
 		);
+	}
+
+	static function dago_election_results_install() {
+		
+		global $wpdb;
+		global $dago_db_version;
+		$dago_db_version = '1.0';
+
+		$table_name = $wpdb->prefix . 'dago_election_races_xx';
+		
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE $table_name (
+			id mediumint(9) NOT NULL AUTO_INCREMENT,
+			time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+			name tinytext NOT NULL,
+			text text NOT NULL,
+			url varchar(55) DEFAULT '' NOT NULL,
+			PRIMARY KEY  (id)
+		) $charset_collate;";
+
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		dbDelta( $sql );
+		//echo $wpdb->last_error;
+
+		add_option( 'dago_db_version', $dago_db_version );
+
 	}
 
 	/**
@@ -25,15 +54,24 @@ class DA_Election_Results_Widget extends WP_Widget {
 	 * @param array $instance Saved values from database.
 	 */
 	public function widget( $args, $instance ) {
-		
+		//echo 'The Widget','<br />';
 		if ( ! empty( $instance['active'] ) ) {
 
+		$linkURL = ! empty( $instance['linkURL'] ) ? $instance['linkURL'] : esc_html__( '/election/', 'dago_election_results_domain' );
+		$linkLabel = ! empty( $instance['linkLabel'] ) ? $instance['linkLabel'] : esc_html__( 'Full Results', '
+			dago_election_results_domain' );
+		$noCandidates = ! empty( $instance['noCandidates'] ) ? $instance['noCandidates'] : esc_html__( '99', 'dago_election_results_domain' );	
+
 			echo $args['before_widget'];
+
+			if ( ! empty( $instance['banner'] ) ) {
+				echo '<img class="img-fluid" src="', plugins_url(), '/dago-election-results/assets/img/client/', apply_filters( 'widget_banner', $instance['banner'] ), '" />';
+			}
 
 			if ( ! empty( $instance['title'] ) ) {
 				echo $args['before_title'] . apply_filters( 'widget_title', $instance['title'] ) . $args['after_title'];
 			}
-
+				
 			if ( ! empty( $instance['races'] ) ) {
 
 				echo $args['before_race'];
@@ -41,14 +79,14 @@ class DA_Election_Results_Widget extends WP_Widget {
 				$races = explode(',', $instance['races']);
 				foreach ($races as $race) {
 					//echo $race, '<br />';
-					$this->da_election_results_create_race_html( $race, $instance['noCandidates'], $instance['linkURL'], $instance['linkLabel'] );
+					$this->dago_election_results_create_race_html( $race, $noCandidates, $linkURL, $linkLabel );
 				}
 
 				echo $args['after_race'];
 			}
 
-			//echo esc_html__( 'Hello, World!', 'da_election_results_domain' );
-
+			//echo esc_html__( 'Hello, World!', 'DAGO_election_results_domain' );
+			
 			echo $args['after_widget'];
 	
 		}
@@ -64,24 +102,24 @@ class DA_Election_Results_Widget extends WP_Widget {
 	 */
 	public function form( $instance ) {
 
-		$title = ! empty( $instance['title'] ) ? $instance['title'] : esc_html__( '', 'da_election_results_domain' );
+		$title = ! empty( $instance['title'] ) ? $instance['title'] : esc_html__( '', 'dago_election_results_domain' );
 
-		$banner = ! empty( $instance['banner'] ) ? $instance['banner'] : esc_html__( '', 'da_election_results_domain' );
+		$banner = ! empty( $instance['banner'] ) ? $instance['banner'] : esc_html__( '', 'dago_election_results_domain' );
 
-		$races = ! empty( $instance['races'] ) ? $instance['races'] : esc_html__( '', 'da_election_results_domain' );
+		$races = ! empty( $instance['races'] ) ? $instance['races'] : esc_html__( '', 'dago_election_results_domain' );
 
-		$noCandidates = ! empty( $instance['noCandidates'] ) ? $instance['noCandidates'] : esc_html__( '99', 'da_election_results_domain' );	
+		$noCandidates = ! empty( $instance['noCandidates'] ) ? $instance['noCandidates'] : esc_html__( '99', 'dago_election_results_domain' );	
 
-		$linkURL = ! empty( $instance['linkURL'] ) ? $instance['linkURL'] : esc_html__( '/election/', 'da_election_results_domain' );
+		$linkURL = ! empty( $instance['linkURL'] ) ? $instance['linkURL'] : esc_html__( '/election/', 'dago_election_results_domain' );
 
-		$linkLabel = ! empty( $instance['linkLabel'] ) ? $instance['linkLabel'] : esc_html__( 'Full Results', 'da_election_results_domain' );
+		$linkLabel = ! empty( $instance['linkLabel'] ) ? $instance['linkLabel'] : esc_html__( 'Full Results', 'dago_election_results_domain' );
 
-		$active = ! empty( $instance['active'] ) ? $instance['active'] : esc_html__( '', 'da_election_results_domain' );
+		$active = ! empty( $instance['active'] ) ? $instance['active'] : esc_html__( '', 'dago_election_results_domain' );
 		
 		?>
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>"><?php esc_attr_e( 'Title:', 'da_election_results_domain' ); ?>			
+			for="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>"><?php esc_attr_e( 'Title:', 'dago_election_results_domain' ); ?>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -93,7 +131,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'banner' ) ); ?>"><?php esc_attr_e( 'Banner:', 'da_election_results_domain' ); ?>			
+			for="<?php echo esc_attr( $this->get_field_id( 'banner' ) ); ?>"><?php esc_attr_e( 'Banner:', 'dago_election_results_domain' ); ?>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -105,7 +143,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'races' ) ); ?>"><?php esc_attr_e( 'Races:', 'da_election_results_domain' ); ?>			
+			for="<?php echo esc_attr( $this->get_field_id( 'races' ) ); ?>"><?php esc_attr_e( 'Races:', 'dago_election_results_domain' ); ?>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -117,7 +155,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'noCandidates' ) ); ?>"><?php esc_attr_e( 'No. Candidates:', 'da_election_results_domain' ); ?>	<small>Candiates to display</small>		
+			for="<?php echo esc_attr( $this->get_field_id( 'noCandidates' ) ); ?>"><?php esc_attr_e( 'No. Candidates:', 'dago_election_results_domain' ); ?>	<small>Candiates to display</small>		
 		</label> 
 		<input 
 			class="widefat" 
@@ -129,7 +167,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 		
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'linkURL' ) ); ?>"><?php esc_attr_e( 'Link URL:', 'da_election_results_domain' ); ?> <small>If blank, default URL.</small>			
+			for="<?php echo esc_attr( $this->get_field_id( 'linkURL' ) ); ?>"><?php esc_attr_e( 'Link URL:', 'dago_election_results_domain' ); ?> <small>If blank, default URL.</small>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -141,7 +179,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'linkLabel' ) ); ?>"><?php esc_attr_e( 'Link Label:', 'da_election_results_domain' ); ?> <small>If blank, Full Result.</small>			
+			for="<?php echo esc_attr( $this->get_field_id( 'linkLabel' ) ); ?>"><?php esc_attr_e( 'Link Label:', 'dago_election_results_domain' ); ?> <small>If blank, Full Result.</small>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -153,7 +191,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		<p>
 		<label 
-			for="<?php echo esc_attr( $this->get_field_id( 'acive' ) ); ?>"><?php esc_attr_e( 'Active:', 'da_election_results_domain' ); ?>			
+			for="<?php echo esc_attr( $this->get_field_id( 'acive' ) ); ?>"><?php esc_attr_e( 'Active:', 'dago_election_results_domain' ); ?>			
 		</label> 
 		<input 
 			class="widefat" 
@@ -197,7 +235,7 @@ class DA_Election_Results_Widget extends WP_Widget {
 		return $instance;
 	}
 
-	private function da_election_results_create_race_html( $param_race, $param_cands, $param_link_URL, $param_link_label ) {
+	private function dago_election_results_create_race_html( $param_race, $param_cands, $param_link_URL, $param_link_label ) {
 
 		global $wpdb;
 		$raceUniqueID  = filter_var( sanitize_text_field( $param_race ), FILTER_SANITIZE_STRING ) ;
@@ -207,10 +245,10 @@ class DA_Election_Results_Widget extends WP_Widget {
 
 		echo $instance['linkLabel'];
 
-		$query = "SELECT raceUniqueID, title1, title2, lastUpdated, precintsPercentage FROM da_election_races WHERE raceUniqueID = %s";
+		$query = "SELECT raceUniqueID, title1, title2, lastUpdated, precintsPercentage FROM dago_election_races WHERE raceUniqueID = %s";
 		$race = $wpdb->get_row( $wpdb->prepare( $query, $raceUniqueID) ); // or die( $wpdb->last_error );
 
-		$query = "SELECT * FROM da_election_candidates WHERE raceUniqueID = %s ORDER BY numberVotes Desc LIMIT %d";
+		$query = "SELECT * FROM dago_election_candidates WHERE raceUniqueID = %s ORDER BY numberVotes Desc LIMIT %d";
 		$params = array( $raceUniqueID, $candidates );
 		$candidates = $wpdb->get_results( $wpdb->prepare( $query, $params ) ); //or die( $wpdb->last_error );
 
@@ -238,4 +276,6 @@ class DA_Election_Results_Widget extends WP_Widget {
 		
 	}
 
-} // class Foo_Widget
+} // class DAGO_Election_Results_Widget
+
+register_activation_hook( __FILE__, array( 'DAGO_Election_Results_Widget', 'dago_election_results_install12' ) );
